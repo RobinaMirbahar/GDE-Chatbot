@@ -5,7 +5,7 @@ from langchain_community.vectorstores import FAISS
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.document_loaders import GoogleDriveLoader, PyPDFLoader
+from langchain_community.document_loaders import GoogleDriveLoader, PyPDFLoader, WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 import re
@@ -19,6 +19,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- Constants ---
+DOCUMENT_SOURCES = {
+    "welcome_guide": "http://bit.ly/welcome-gde",
+    "program_overview": "https://docs.google.com/document/d/1CYq8965IO7flA8UW1gbDKSwezO7EvcsIPKxU4iL2whk/edit",
+    "travel_policy": "http://goo.gle/travel-program-policy"
+}
+
 # --- Authentication ---
 def authenticate_user(email):
     """Check if email is authorized"""
@@ -29,79 +36,134 @@ def authenticate_user(email):
 # --- Document Processing ---
 @st.cache_resource(ttl=86400)  # Refresh daily
 def load_and_process_documents():
-    """Load and process all GDE documents"""
+    """Load and process all specified GDE documents"""
     docs = []
     
-    # Load from Google Drive (main program guide)
+    # Load Welcome Guide (PDF from URL)
     try:
-        loader = GoogleDriveLoader(
-            document_ids=["1MDmMSWhjtq1i9w1wOwyJhG89YOZS9LVBB-WaKpeSfWw"],
+        welcome_loader = WebBaseLoader(DOCUMENT_SOURCES["welcome_guide"])
+        welcome_docs = welcome_loader.load()
+        for doc in welcome_docs:
+            doc.metadata["source"] = "GDE Welcome Guide"
+            doc.metadata["document_type"] = "welcome"
+        docs.extend(welcome_docs)
+    except Exception as e:
+        st.error(f"Error loading Welcome Guide: {e}")
+    
+    # Load Program Overview (Google Doc)
+    try:
+        program_loader = GoogleDriveLoader(
+            document_ids=["1CYq8965IO7flA8UW1gbDKSwezO7EvcsIPKxU4iL2whk"],
             credentials_path="service_account.json"
         )
-        docs.extend(loader.load())
+        program_docs = program_loader.load()
+        for doc in program_docs:
+            doc.metadata["source"] = "GDE Program Overview"
+            doc.metadata["document_type"] = "overview"
+        docs.extend(program_docs)
     except Exception as e:
-        st.error(f"Error loading Google Doc: {e}")
+        st.error(f"Error loading Program Overview: {e}")
     
-    # Load additional PDFs from local 'documents' folder
+    # Load Travel Policy (PDF from URL)
     try:
-        pdf_loader = PyPDFLoader("documents/")
-        docs.extend(pdf_loader.load())
+        travel_loader = WebBaseLoader(DOCUMENT_SOURCES["travel_policy"])
+        travel_docs = travel_loader.load()
+        for doc in travel_docs:
+            doc.metadata["source"] = "GDE Travel Policy"
+            doc.metadata["document_type"] = "travel"
+        docs.extend(travel_docs)
     except Exception as e:
-        st.error(f"Error loading PDFs: {e}")
+        st.error(f"Error loading Travel Policy: {e}")
     
-    # Process documents
+    # Process documents with special handling for different formats
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
-        separators=["\n\n", "\n", " (?=\\d+\\. )", " ", ""]  # Preserve numbered sections
+        separators=["\n\n", "\n", " (?=\\d+\\. )", " ", ""]
     )
     
     processed_docs = []
     for doc in docs:
-        # Add metadata for source tracking
+        # Clean and standardize document content
+        doc.page_content = clean_document_content(doc.page_content, doc.metadata["document_type"])
         doc.metadata["loaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if not doc.metadata.get("source"):
-            doc.metadata["source"] = "Unknown GDE Document"
         processed_docs.extend(text_splitter.split_documents([doc]))
     
     return processed_docs
 
+def clean_document_content(content, doc_type):
+    """Clean document content based on its type"""
+    if doc_type == "welcome":
+        # Remove headers/footers from PDF
+        content = re.sub(r'Page \d+ of \d+', '', content)
+    elif doc_type == "travel":
+        # Clean policy document formatting
+        content = re.sub(r'\s{3,}', '  ', content)
+    return content.strip()
+
 # --- Location Awareness ---
 def get_regional_contact(country_code):
-    """Get regional contact based on country code"""
+    """Enhanced regional contact with timezone awareness"""
     contacts = {
-        "NA": {"name": "North America Team", "email": "na-gde@google.com", "countries": ["US", "CA", "MX"]},
-        "EMEA": {"name": "EMEA Team", "email": "emea-gde@google.com", "countries": ["GB", "DE", "FR", "IT", "ES"]},
-        "APAC": {"name": "APAC Team", "email": "apac-gde@google.com", "countries": ["IN", "JP", "KR", "SG", "AU"]},
-        "LATAM": {"name": "LATAM Team", "email": "latam-gde@google.com", "countries": ["BR", "AR", "CL"]}
+        "NA": {
+            "name": "North America Team", 
+            "email": "na-gde@google.com",
+            "countries": ["US", "CA", "MX"],
+            "office_hours": "9AM-5PM PST"
+        },
+        "EMEA": {
+            "name": "EMEA Team", 
+            "email": "emea-gde@google.com",
+            "countries": ["GB", "DE", "FR", "IT", "ES", "NL"],
+            "office_hours": "9AM-5PM CET"
+        },
+        "APAC": {
+            "name": "APAC Team", 
+            "email": "apac-gde@google.com",
+            "countries": ["IN", "JP", "KR", "SG", "AU", "NZ"],
+            "office_hours": "9AM-5PM SGT"
+        },
+        "LATAM": {
+            "name": "LATAM Team", 
+            "email": "latam-gde@google.com",
+            "countries": ["BR", "AR", "CL", "CO"],
+            "office_hours": "9AM-5PM BRT"
+        }
     }
     
     for region, data in contacts.items():
         if country_code.upper() in data["countries"]:
             return data
     
-    return {"name": "Global GDE Team", "email": "global-gde@google.com"}
+    return {
+        "name": "Global GDE Team", 
+        "email": "global-gde@google.com",
+        "office_hours": "24/7"
+    }
 
 # --- Chatbot Initialization ---
 @st.cache_resource
 def initialize_chatbot():
-    """Initialize the retrieval-augmented chatbot"""
+    """Initialize the retrieval-augmented chatbot with document-specific handling"""
     docs = load_and_process_documents()
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     vectorstore = FAISS.from_documents(docs, embeddings)
     
-    # Custom prompt for GDE-specific answers
+    # Document-specific prompt template
     prompt = ChatPromptTemplate.from_template("""
     You are an expert assistant for the Google Developer Experts (GDE) program.
-    Answer questions STRICTLY based on the provided context from official GDE documents.
+    Strictly answer questions ONLY using information from the following documents:
+    - GDE Welcome Guide (welcome_guide)
+    - GDE Program Overview (program_overview)
+    - GDE Travel Policy (travel_policy)
     
     Important rules:
-    1. If the answer isn't in the documents, say "I couldn't find this information in the GDE documentation."
-    2. For policy questions, always cite the specific document and section.
-    3. Be concise but thorough.
-    4. Format responses using markdown for readability.
+    1. If the answer isn't in these documents, say: "This information isn't available in the current GDE documentation."
+    2. Always cite the specific document name when answering.
+    3. For policy questions, include the relevant section if possible.
+    4. Format responses clearly using markdown.
     
-    Context:
+    Context from documents:
     {context}
     
     Question: {input}
@@ -109,15 +171,20 @@ def initialize_chatbot():
     Answer:
     """)
     
-    llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.2)
+    llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.1)
     document_chain = create_stuff_documents_chain(llm, prompt)
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+    retriever = vectorstore.as_retriever(
+        search_kwargs={
+            "k": 5,
+            "score_threshold": 0.7
+        }
+    )
     
     return create_retrieval_chain(retriever, document_chain)
 
 # --- UI Components ---
 def show_authentication():
-    """Authentication sidebar"""
+    """Enhanced authentication sidebar with document info"""
     with st.sidebar:
         st.title("🔐 GDE Authentication")
         email = st.text_input("Enter your Google or Advocu email:")
@@ -128,26 +195,34 @@ def show_authentication():
         
         country = st.selectbox(
             "Select your country:",
-            ["US", "CA", "MX", "BR", "GB", "DE", "FR", "IN", "JP", "Other"]
+            ["US", "CA", "MX", "BR", "GB", "DE", "FR", "IN", "JP", "SG", "AU", "Other"],
+            index=0
         )
         
         st.markdown("---")
-        st.markdown("**Documentation Status**")
-        docs = load_and_process_documents()
-        unique_sources = list(set(d.metadata["source"] for d in docs))
-        for source in sorted(unique_sources):
-            st.caption(f"✓ {source}")
+        st.markdown("**Documentation Loaded**")
+        st.caption("✓ GDE Welcome Guide")
+        st.caption("✓ GDE Program Overview")
+        st.caption("✓ GDE Travel Policy")
+        
+        st.markdown("---")
+        st.markdown("**Need Help?**")
+        contact = get_regional_contact(country)
+        st.caption(f"Regional contact: {contact['email']}")
+        st.caption(f"Office hours: {contact['office_hours']}")
         
         return email, country
 
 def show_chat_interface():
-    """Main chat interface"""
+    """Enhanced chat interface with document awareness"""
     st.title("🤖 GDE Program Assistant")
-    st.caption("Ask me anything about the GDE program - policies, applications, reporting, and more")
+    st.caption("Ask me about the Welcome Guide, Program Overview, or Travel Policy")
     
     # Initialize chat history
     if "messages" not in st.session_state:
-        st.session_state.messages = []
+        st.session_state.messages = [
+            {"role": "assistant", "content": "Hi! I can answer questions about:\n- GDE Welcome Guide\n- Program Overview\n- Travel Policy\n\nWhat would you like to know?"}
+        ]
     
     # Display chat messages
     for message in st.session_state.messages:
@@ -167,22 +242,27 @@ def show_chat_interface():
         
         # Get chatbot response
         with st.chat_message("assistant"):
-            with st.spinner("Consulting GDE docs..."):
+            with st.spinner("Searching GDE documents..."):
                 try:
                     chatbot = initialize_chatbot()
                     response = chatbot.invoke({"input": prompt})
                     answer = response["answer"]
                     
-                    # Add regional contact if location-relevant
-                    location_keywords = ["country", "region", "contact", "local", "move", "relocate"]
-                    if any(keyword in prompt.lower() for keyword in location_keywords):
+                    # Enhance with document source info
+                    sources = list(set(doc.metadata["source"] for doc in response["context"]))
+                    if sources:
+                        answer += f"\n\n*Sources: {', '.join(sources)}*"
+                    
+                    # Add regional contact for location-specific questions
+                    if any(keyword in prompt.lower() for keyword in ["country", "region", "contact", "timezone"]):
                         contact = get_regional_contact(st.session_state.country)
-                        answer += f"\n\n**Regional Contact**: {contact['name']} ({contact['email']})"
+                        answer += f"\n\n**Your Regional Contact**: {contact['name']} ({contact['email']})"
+                        answer += f"\n**Office Hours**: {contact['office_hours']}"
                     
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
                 except Exception as e:
-                    st.error(f"Error: {str(e)}")
+                    st.error(f"Error processing your question: {str(e)}")
 
 # --- Main App Flow ---
 def main():
