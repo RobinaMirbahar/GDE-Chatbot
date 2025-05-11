@@ -10,6 +10,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 import re
 from datetime import datetime
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 # Configure the app
 st.set_page_config(
@@ -26,6 +28,18 @@ DOCUMENT_SOURCES = {
     "travel_policy": "http://goo.gle/travel-program-policy"
 }
 
+# Initialize Google Drive credentials
+def get_drive_credentials():
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            "service_account.json",
+            scopes=["https://www.googleapis.com/auth/drive.readonly"]
+        )
+        return credentials
+    except Exception as e:
+        st.error(f"Failed to load Google Drive credentials: {str(e)}")
+        return None
+
 # --- Authentication ---
 def authenticate_user(email):
     """Check if email is authorized"""
@@ -38,6 +52,10 @@ def authenticate_user(email):
 def load_and_process_documents():
     """Load and process all specified GDE documents"""
     docs = []
+    credentials = get_drive_credentials()
+    
+    if not credentials:
+        return []
     
     # Load Welcome Guide (PDF from URL)
     try:
@@ -54,7 +72,7 @@ def load_and_process_documents():
     try:
         program_loader = GoogleDriveLoader(
             document_ids=["1CYq8965IO7flA8UW1gbDKSwezO7EvcsIPKxU4iL2whk"],
-            credentials_path="service_account.json"
+            credentials=credentials
         )
         program_docs = program_loader.load()
         for doc in program_docs:
@@ -266,6 +284,19 @@ def show_chat_interface():
 
 # --- Main App Flow ---
 def main():
+    # Check for service account file first
+    if not os.path.exists("service_account.json"):
+        st.error("Missing service_account.json - needed for Google Drive access")
+        st.info("Please ensure you've:")
+        st.markdown("""
+        1. Created a Google Cloud service account
+        2. Enabled Google Drive API
+        3. Downloaded the JSON key file
+        4. Named it `service_account.json` in this folder
+        5. Shared your documents with the service account email
+        """)
+        return
+    
     # Authentication
     email, country = show_authentication()
     st.session_state.authenticated = authenticate_user(email)
@@ -275,7 +306,4 @@ def main():
     show_chat_interface()
 
 if __name__ == "__main__":
-    if not os.path.exists("service_account.json"):
-        st.error("Missing service_account.json - needed for Google Drive access")
-    else:
-        main()
+    main()
