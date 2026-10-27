@@ -1,5 +1,42 @@
 # GDE-Chatbot
 
+> **Author & Architect:** [Robina Mirbahar](https://github.com/RobinaMirbahar) (Google Developer Expert in Cloud & AI)  
+> **Focus:** Google Cloud & Gemini AI Community Assistant Built with Python, Vertex AI & Grounded Knowledge Retrieval
+
+---
+
+## 🎯 Why I Built GDE Community Assistant Chatbot (Engineering Purpose & Real-World Value)
+
+### 1. 🤝 Scaling Developer Mentorship Across Community Events
+As a Google Developer Expert (GDE), I frequently answer hundreds of recurring questions from students and builders about Google Cloud architecture, Vertex AI quotas, and learning paths. I built GDE-Chatbot as a grounded community assistant.
+
+### 2. 📚 Context-Aware Multi-Turn Guidance
+I engineered the session loop to preserve conversation history and provide runnable `gcloud` and Python SDK snippets tailored to the developer's experience level.
+
+### 3. ⚡ Lightweight & Extensible Python Blueprint
+The codebase is intentionally clean and modular so local GDG and WTM chapters can fork and deploy their own event assistant in minutes.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Dev ["1. Community Member Inquiry"]
+        D_Q["Cloud Architecture / Vertex AI / Career Question"]
+    end
+    subgraph Bot ["2. GDE Assistant Core (Python + Gemini)"]
+        B_Mem["Multi-Turn Session Context"]
+        B_Prompt["GDE Mentorship System Instructions"]
+        B_LLM["Google Gemini / Vertex AI Inference"]
+    end
+    subgraph Ans ["3. Grounded Technical Response"]
+        A_Code["Runnable SDK Snippets & Official Doc Links"]
+    end
+    D_Q --> B_Mem --> B_Prompt --> B_LLM --> A_Code
+```
+
+---
 
 ---
 
@@ -20,3 +57,22 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/RobinaMirbahar/RobinaMirbahar/main/ProfileImages/GithubBanner.svg" alt="Robina Mirbahar Banner" width="100%" />
 </div>
+
+<!-- AUTHOR_SIGNATURE_START -->
+---
+
+## 👩‍💻 About the Author
+
+**Robina Mirbahar — Google Cloud & AI Architect**  
+*Google Developer Expert (GDE) in Cloud & AI • Published Author • Multi-Agent Systems & Serverless GPU Builder*
+
+[![GitHub](https://img.shields.io/badge/GitHub-RobinaMirbahar-181717?style=for-the-badge&logo=github)](https://github.com/RobinaMirbahar)
+[![Medium](https://img.shields.io/badge/Medium-@robinamirbahar-000000?style=for-the-badge&logo=medium)](https://medium.com/@robinamirbahar)
+[![DEV.to](https://img.shields.io/badge/DEV.to-robinamirbahar-0A0A0A?style=for-the-badge&logo=devdotto)](https://dev.to/robinamirbahar)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Robina_Mirbahar-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/robina-mirbahar)
+[![GDE Profile](https://img.shields.io/badge/Google_Developer_Expert-Profile-4285F4?style=for-the-badge&logo=google)](https://g.dev/RobinaMirbahar)
+[![YouTube](https://img.shields.io/badge/YouTube-@RobinaMirbahar-FF0000?style=for-the-badge&logo=youtube)](https://www.youtube.com/@RobinaMirbahar)
+[![X](https://img.shields.io/badge/X-@RobinaMirbahar-000000?style=for-the-badge&logo=x)](https://x.com/RobinaMirbahar)
+[![Amazon Author](https://img.shields.io/badge/Amazon_Book-Cloud_Computing_Voyage-FF9900?style=for-the-badge&logo=amazon)](https://www.amazon.com/dp/B0D146249R)
+
+<!-- AUTHOR_SIGNATURE_END -->
