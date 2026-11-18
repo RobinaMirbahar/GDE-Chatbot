@@ -34,15 +34,6 @@ flowchart TD
         A_Code["Runnable SDK Snippets & Official Doc Links"]
     end
     D_Q --> B_Mem --> B_Prompt --> B_LLM --> A_Code
-    style Dev fill:#fce7f3,stroke:#db2777,stroke-width:2px,color:#831843
-    style D_Q fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
-    style Bot fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
-    style Core fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#581c87
-    style B_Mem fill:#fce7f3,stroke:#db2777,stroke-width:2px,color:#831843
-    style B_Prompt fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
-    style B_LLM fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
-    style Ans fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#581c87
-    style A_Code fill:#fce7f3,stroke:#db2777,stroke-width:2px,color:#831843
 ```
 
 ---
