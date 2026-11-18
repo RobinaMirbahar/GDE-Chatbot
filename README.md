@@ -1,7 +1,8 @@
 # GDE-Chatbot
 
 > **Author & Architect:** [Robina Mirbahar](https://github.com/RobinaMirbahar) ([Google Developer Expert in Cloud & AI](https://developers.google.com/profile/u/106918534005910641104?utm_campaign=deveco_gdemembers&utm_source=deveco) · Google Cloud Champion Innovator · Co-Author of [*AI Engineering*](https://www.amazon.com/dp/B0GWCZWCF4))  
-> **Focus:** Google Cloud & Gemini AI Community Assistant Built with Python, Vertex AI & Grounded Knowledge Retrieval
+> 📚 **Architecture Track:** Google Cloud & Gemini AI Community Knowledge Assistant  
+> **Core Stack:** [Google Cloud Vertex AI](https://cloud.google.com/vertex-ai/docs?utm_campaign=deveco_gdemembers&utm_source=deveco), [Google Gemini API](https://ai.google.dev/gemini-api/docs?utm_campaign=deveco_gdemembers&utm_source=deveco), Grounded RAG Retrieval, and Python.
 
 ---
 
